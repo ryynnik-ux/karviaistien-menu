@@ -3,7 +3,7 @@ name: Telegram School Menu
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 15 * * 6"
+    - cron: "46 14 * * 2"
 jobs:
   send:
     runs-on: ubuntu-latest
@@ -26,4 +26,3 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kouluruoka-html
-          path: debug.html

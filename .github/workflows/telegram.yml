@@ -3,7 +3,7 @@ name: Telegram School Menu
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "0 16 * * 6"
 jobs:
   send:
     runs-on: ubuntu-latest

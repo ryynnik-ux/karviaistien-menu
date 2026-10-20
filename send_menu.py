@@ -1,5 +1,4 @@
 import requests
-from bs4 import BeautifulSoup
 
 url = "https://kouluruoka.fi/menu/helsinki_karviaistienkoulu/"
 
@@ -9,14 +8,16 @@ response = requests.get(
     timeout=30
 )
 
-response.raise_for_status()
+html = response.text
 
-soup = BeautifulSoup(response.text, "html.parser")
+print("FOUND:", "gatsby-inlined-page-data" in html)
 
-script = soup.find("script", {"id": "gatsby-inlined-page-data"})
+print("POSITION:")
+print(html.find("gatsby-inlined-page-data"))
 
-if script:
-    print("FOUND SCRIPT")
-    print(script.text[:10000])
-else:
-    print("SCRIPT NOT FOUND")
+print("SNIPPET:")
+
+pos = html.find("gatsby-inlined-page-data")
+
+if pos != -1:
+    print(html[pos:pos+10000])

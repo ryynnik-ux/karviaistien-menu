@@ -1,4 +1,4 @@
-name: Telegram School Menu
+name: Telegram School Menu TEST
 
 on:
   workflow_dispatch:

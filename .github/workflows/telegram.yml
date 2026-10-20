@@ -2,7 +2,8 @@ name: Telegram Test
 
 on:
   workflow_dispatch:
-
+  schedule:
+    - cron: "0 15 * * 6"
 jobs:
   send:
     runs-on: ubuntu-latest

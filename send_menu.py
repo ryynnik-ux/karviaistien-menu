@@ -12,32 +12,25 @@ NEXT_WEEK_URL = "https://kouluruoka.fi/menu/helsinki_karviaistienkoulu/2/"
 
 def extract_page_data(html):
 
-    pattern = r'window\.pageData=d=(\{.*?\});\)\(\);'
+    marker = 'window.pageData=d='
 
-    match = re.search(pattern, html, re.DOTALL)
-
-    if match:
-        return json.loads(match.group(1))
-
-    start = html.find('"pageContext":{"menu":')
+    start = html.find(marker)
 
     if start == -1:
-        raise Exception("Ruokalistaa ei löytynyt sivulta.")
+        raise Exception("window.pageData ei löytynyt")
 
-    end = html.find('"restaurantId"', start)
+    start += len(marker)
 
-    if end == -1:
-        raise Exception("Ruokalistan loppua ei löytynyt.")
+    end = html.find("window.pageData=d;", start)
 
-    json_fragment = (
-        "{"
-        + html[start:end].rstrip(",")
-        + "}"
-    )
+    print("START:", start)
+    print("END:", end)
 
-    return json.loads(json_fragment)
+    print("HTML AROUND START")
+    print(html[start:start + 500])
 
-
+    raise Exception("DEBUG")
+    
 def format_meal(meal_name):
 
     meal_name = re.sub(r"\s*\([^)]*\)", "", meal_name)

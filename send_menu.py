@@ -1,7 +1,7 @@
 import os
 import re
+import json
 import requests
-from bs4 import BeautifulSoup
 
 TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
@@ -9,106 +9,62 @@ CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 THIS_WEEK_URL = "https://kouluruoka.fi/menu/helsinki_karviaistienkoulu/"
 NEXT_WEEK_URL = "https://kouluruoka.fi/menu/helsinki_karviaistienkoulu/2/"
 
+
 def fetch_menu(url):
     response = requests.get(url, timeout=30)
     response.raise_for_status()
 
-    response.encoding = "utf-8"
+    html = response.text
 
-    # DEBUG
-    with open("debug.html", "w", encoding="utf-8") as f:
-        f.write(response.text)
+    start_marker = 'window.pageData=d='
+    end_marker = ';if(typeof window!=="undefined"'
 
-    
-    soup = BeautifulSoup(response.text, "html.parser")
-    text = soup.get_text("\n", strip=True)
+    start = html.find(start_marker)
 
-    lines = [
-        line.strip()
-        for line in text.splitlines()
-        if line.strip()
-    ]
+    if start == -1:
+        raise Exception("pageData JSON ei löytynyt")
 
-    paivat = [
-        "maanantai",
-        "tiistai",
-        "keskiviikko",
-        "torstai",
-        "perjantai",
-    ]
+    start += len(start_marker)
 
-    tulos = []
+    end = html.find(end_marker, start)
 
-    for i, line in enumerate(lines):
+    if end == -1:
+        raise Exception("pageData JSON loppua ei löytynyt")
 
-        lower = line.lower()
+    json_text = html[start:end]
 
-        if not any(lower.startswith(paiva) for paiva in paivat):
-            continue
+    data = json.loads(json_text)
 
-        paiva = line
-        ruoat = []
+    days = data["result"]["pageContext"]["menu"]["Days"]
 
-        for j in range(i + 1, min(i + 50, len(lines))):
+    output = []
 
-            rivi = lines[j]
+    for day in days:
 
-            if any(rivi.lower().startswith(p) for p in paivat):
-                break
+        output.append(f"📌 {day['Date']}")
 
-            if (
-                rivi.startswith("(")
-                or "ainesosat" in rivi.lower()
-                or "ravintosis" in rivi.lower()
-                or "energia" in rivi.lower()
-                or "proteiini" in rivi.lower()
-                or "hiilihydraatit" in rivi.lower()
-                or "rasva" in rivi.lower()
-                or "suola" in rivi.lower()
-                or rivi in ["0", "Lounas", "Lounas."]
-            ):
+        meals = day.get("Meals", [])
+
+        for idx, meal in enumerate(meals):
+
+            nutritions = meal.get("Nutritions", [])
+
+            if not nutritions:
                 continue
 
-            if len(rivi) < 4:
-                continue
+            icon = "🥦" if idx == 0 else "🍗"
 
-            if ":" in rivi:
-                continue
+            main_course = nutritions[0]["Name"]
 
-            if rivi not in ruoat:
-                ruoat.append(rivi)
+            output.append("")
+            output.append(f"{icon} {main_course}")
 
-        # Siivotaan yleisiä roskia
-        siivotut = []
+            for side in nutritions[1:]:
+                output.append(f"   • {side['Name']}")
 
-        for ruoka in ruoat:
+        output.append("")
 
-            if any(
-                sana in ruoka.lower()
-                for sana in [
-                    "ainesosat",
-                    "ravintosis",
-                    "energia",
-                    "josta",
-                    "kj",
-                    "kcal",
-                    "%",
-                ]
-            ):
-                continue
-
-            siivotut.append(ruoka)
-
-        # Otetaan vain ensimmäiset varsinaiset ruoat
-        siivotut = siivotut[:3]
-
-        if siivotut:
-            tulos.append(
-                f"📌 {paiva}\n"
-                + "\n".join(f"• {r}" for r in siivotut)
-            )
-
-    return "\n\n".join(tulos)
+    return "\n".join(output)
 
 
 def send_message(message):
@@ -144,8 +100,14 @@ if __name__ == "__main__":
 
     except Exception as e:
 
-        send_message(
-            f"❌ Ruokalistan haku epäonnistui:\n\n{str(e)}"
+        error_message = (
+            "❌ Ruokalistan haku epäonnistui\n\n"
+            f"{str(e)}"
         )
+
+        try:
+            send_message(error_message)
+        except:
+            pass
 
         raise

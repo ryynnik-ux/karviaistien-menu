@@ -1,6 +1,6 @@
 import os
-import re
 import json
+import re
 import requests
 
 TOKEN = os.environ["TELEGRAM_TOKEN"]
@@ -10,64 +10,91 @@ THIS_WEEK_URL = "https://kouluruoka.fi/menu/helsinki_karviaistienkoulu/"
 NEXT_WEEK_URL = "https://kouluruoka.fi/menu/helsinki_karviaistienkoulu/2/"
 
 
+def extract_page_data(html):
+
+    pattern = r'window\.pageData=d=(\{.*?\});\)\(\);'
+
+    match = re.search(pattern, html, re.DOTALL)
+
+    if match:
+        return json.loads(match.group(1))
+
+    start = html.find('"pageContext":{"menu":')
+
+    if start == -1:
+        raise Exception("Ruokalistaa ei löytynyt sivulta.")
+
+    end = html.find('"restaurantId"', start)
+
+    if end == -1:
+        raise Exception("Ruokalistan loppua ei löytynyt.")
+
+    json_fragment = (
+        "{"
+        + html[start:end].rstrip(",")
+        + "}"
+    )
+
+    return json.loads(json_fragment)
+
+
+def format_meal(meal_name):
+
+    meal_name = re.sub(r"\s*\([^)]*\)", "", meal_name)
+
+    parts = [
+        p.strip()
+        for p in meal_name.split(",")
+        if p.strip()
+    ]
+
+    if not parts:
+        return ""
+
+    result = []
+
+    result.append(parts[0])
+
+    for side in parts[1:]:
+        result.append(f"   • {side}")
+
+    return "\n".join(result)
+
+
 def fetch_menu(url):
+
     response = requests.get(url, timeout=30)
     response.raise_for_status()
 
     html = response.text
 
-    start_marker = 'window.pageData=d='
-    end_marker = ';if(typeof window!=="undefined"'
+    page_data = extract_page_data(html)
 
-    start = html.find(start_marker)
-
-    if start == -1:
-        raise Exception("pageData JSON ei löytynyt")
-
-    start += len(start_marker)
-
-    end = html.find(end_marker, start)
-
-    if end == -1:
-        raise Exception("pageData JSON loppua ei löytynyt")
-
-    json_text = html[start:end]
-
-    data = json.loads(json_text)
-
-    days = data["result"]["pageContext"]["menu"]["Days"]
+    menu = page_data["pageContext"]["menu"]
 
     output = []
 
-    for day in days:
+    for day in menu["Days"]:
 
         output.append(f"📌 {day['Date']}")
+        output.append("")
 
-        meals = day.get("Meals", [])
+        meals = day["Meals"]
 
         for idx, meal in enumerate(meals):
 
-            nutritions = meal.get("Nutritions", [])
-
-            if not nutritions:
-                continue
-
             icon = "🥦" if idx == 0 else "🍗"
 
-            main_course = nutritions[0]["Name"]
+            formatted = format_meal(meal["Name"])
 
+            output.append(f"{icon} {formatted}")
             output.append("")
-            output.append(f"{icon} {main_course}")
-
-            for side in nutritions[1:]:
-                output.append(f"   • {side['Name']}")
-
-        output.append("")
 
     return "\n".join(output)
 
 
 def send_message(message):
+
     response = requests.post(
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
         json={
@@ -91,7 +118,7 @@ if __name__ == "__main__":
             "🍽 Karviaistien koulu\n\n"
             "📅 TÄMÄ VIIKKO\n\n"
             f"{this_week}\n\n"
-            "─────────────────\n\n"
+            "━━━━━━━━━━━━━━\n\n"
             "📅 ENSI VIIKKO\n\n"
             f"{next_week}"
         )
@@ -100,13 +127,10 @@ if __name__ == "__main__":
 
     except Exception as e:
 
-        error_message = (
-            "❌ Ruokalistan haku epäonnistui\n\n"
-            f"{str(e)}"
-        )
-
         try:
-            send_message(error_message)
+            send_message(
+                f"❌ Ruokalistan haku epäonnistui:\n\n{str(e)}"
+            )
         except:
             pass
 

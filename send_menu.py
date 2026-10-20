@@ -1,16 +1,22 @@
 import requests
+from bs4 import BeautifulSoup
 
 url = "https://kouluruoka.fi/menu/helsinki_karviaistienkoulu/"
 
-response = requests.get(url, timeout=30)
+response = requests.get(
+    url,
+    headers={"User-Agent": "Mozilla/5.0"},
+    timeout=30
+)
 
-print("STATUS:")
-print(response.status_code)
+response.raise_for_status()
 
-print("\nFIRST 5000 CHARS:\n")
-print(response.text[:5000])
+soup = BeautifulSoup(response.text, "html.parser")
 
-with open("page.html", "w", encoding="utf-8") as f:
-    f.write(response.text)
+script = soup.find("script", {"id": "gatsby-inlined-page-data"})
 
-print("\nDONE")
+if script:
+    print("FOUND SCRIPT")
+    print(script.text[:10000])
+else:
+    print("SCRIPT NOT FOUND")

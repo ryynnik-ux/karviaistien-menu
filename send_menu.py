@@ -17,9 +17,9 @@ def fetch_menu():
 
     text = soup.get_text("\n", strip=True)
 
-print("===== DEBUG ALKU =====")
-print(text[:5000])
-print("===== DEBUG LOPPU =====")
+    print("===== DEBUG ALKU =====")
+    print(text[:5000])
+    print("===== DEBUG LOPPU =====")
 
     days = [
         "maanantai",

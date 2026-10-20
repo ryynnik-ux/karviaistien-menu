@@ -31,6 +31,7 @@ def get_page_data(url):
     if not match:
         raise Exception("pageData JSON ei löytynyt")
 
+    print(match.group(1)[:500])
     data = json.loads(match.group(1))
 
     return data

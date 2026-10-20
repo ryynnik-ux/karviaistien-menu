@@ -1,5 +1,6 @@
-import requests
 import re
+import json
+import requests
 
 url = "https://kouluruoka.fi/menu/helsinki_karviaistienkoulu/"
 
@@ -17,8 +18,16 @@ match = re.search(
     re.DOTALL
 )
 
-print("MATCH:", match is not None)
+data = json.loads(match.group(1))
 
-if match:
-    print("JSON_LENGTH:", len(match.group(1)))
-    print(match.group(1)[:300])
+days = data["result"]["pageContext"]["menu"]["Days"]
+
+print("PÄIVIÄ:", len(days))
+print("ENSIMMÄINEN PÄIVÄ:")
+print(days[0]["Date"])
+
+print("ENSIMMÄINEN RUOKA:")
+print(days[0]["Meals"][0]["Nutritions"][0]["Name"])
+
+print("ENSIMMÄINEN LISUKE:")
+print(days[0]["Meals"][0]["Nutritions"][1]["Name"])

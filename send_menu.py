@@ -6,12 +6,15 @@ from bs4 import BeautifulSoup
 TOKEN = os.environ["TELEGRAM_TOKEN"]
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
-MENU_URL = "https://kouluruoka.fi/menu/helsinki_karviaistienkoulu/2/"
+THIS_WEEK_URL = "https://kouluruoka.fi/menu/helsinki_karviaistienkoulu/"
+NEXT_WEEK_URL = "https://kouluruoka.fi/menu/helsinki_karviaistienkoulu/2/"
 
-def fetch_menu():
-    response = requests.get(MENU_URL, timeout=30)
+def fetch_menu(url):
+    response = requests.get(url, timeout=30)
     response.raise_for_status()
 
+    response.encoding = "utf-8"
+    
     soup = BeautifulSoup(response.text, "html.parser")
     text = soup.get_text("\n", strip=True)
 
@@ -119,12 +122,17 @@ def send_message(message):
 if __name__ == "__main__":
 
     try:
-        menu = fetch_menu()
+
+        this_week = fetch_menu(THIS_WEEK_URL)
+        next_week = fetch_menu(NEXT_WEEK_URL)
 
         message = (
-            "🍽 Karviaistien koulu\n"
-            "📅 Ensi viikon ruokalista\n\n"
-            f"{menu}"
+            "🍽 Karviaistien koulu\n\n"
+            "📅 TÄMÄ VIIKKO\n\n"
+            f"{this_week}\n\n"
+            "─────────────────\n\n"
+            "📅 ENSI VIIKKO\n\n"
+            f"{next_week}"
         )
 
         send_message(message)

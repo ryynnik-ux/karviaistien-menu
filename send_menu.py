@@ -14,6 +14,11 @@ def fetch_menu(url):
     response.raise_for_status()
 
     response.encoding = "utf-8"
+
+    # DEBUG
+    with open("debug.html", "w", encoding="utf-8") as f:
+        f.write(response.text)
+
     
     soup = BeautifulSoup(response.text, "html.parser")
     text = soup.get_text("\n", strip=True)
